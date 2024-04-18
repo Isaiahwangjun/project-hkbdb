@@ -1,0 +1,7 @@
+__pycache__/
+semantic_result/*
+.env
+prompt/__pycache__/
+env/
+nohup.out
+token.xlsx
