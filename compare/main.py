@@ -101,7 +101,7 @@ def main(name):
 
 
 if __name__ == '__main__':
-    name = '杜漸'
+    name = '杜漸regular'
     clear_excel(name, 'gpt')
     clear_excel(name, 'hkbdb')
     main(name)
