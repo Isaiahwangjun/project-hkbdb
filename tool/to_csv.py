@@ -4,27 +4,37 @@ import json
 import pandas as pd
 import importlib
 
+# for windows
+import sys
+
+sys.path.append("../temp")
+
 
 def to_csv():
-    with open('./semantic_result/江李志豪-2024-03-15_17-36-40/all_result.json',
-              'r',
-              encoding='utf-8') as f:
+    with open(
+            r'C:\Users\wang\Desktop\daoyi\HongKong\api\semantic_result\杜漸\all_result.json',
+            'r',
+            encoding='utf-8') as f:
         data = json.load(f)
 
-    with pd.ExcelWriter('output.xlsx') as writer:
+    with pd.ExcelWriter('杜漸.xlsx') as writer:
         for key, values in data.items():
-
             df = pd.DataFrame(values)
 
             try:
-                temp_module = importlib.import_module(f"../temp.{key}")
+                # linux
+                # temp_module = importlib.import_module(f"../temp.{key}")
+                # windows
+                temp_module = importlib.import_module(f"{key}",
+                                                      package='../temp')
                 temp = temp_module.get_temp()
 
                 df.rename(columns=temp, inplace=True)
                 df.to_excel(writer, sheet_name=key, index=False)
 
-            except ModuleNotFoundError:
+            except ModuleNotFoundError as e:
                 df.to_excel(writer, sheet_name=key, index=False)
+                print(e)
 
 
 to_csv()
