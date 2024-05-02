@@ -9,6 +9,7 @@ import response
 from datetime import datetime
 from flask_cors import CORS
 import threading
+from tool import ch_simple2tradi, regularTime
 
 app = Flask(__name__)
 app.debug = True
@@ -63,6 +64,10 @@ def process_data_info():
 
         # result = json.loads(response_.choices[0].message.content)
         result = try_parse_json(response_.choices[0].message.content)
+
+        # 簡體轉繁體 & 正則化時間相關欄位
+        result = ch_simple2tradi.convert_text(result)
+        result = regularTime.modify_dates(result)
 
         basic_info = result.get('BasicInformation', [{}])[0]
         name_value = basic_info.get('常見名稱', basic_info.get('本名'))
@@ -133,9 +138,13 @@ for process in all_processes:
             # result = json.loads(response_.choices[0].message.content)
             result = try_parse_json(response_.choices[0].message.content)
 
-            json_path = f'./semantic_result/{folder_name}/{process}.json'
-            with open(json_path, 'w', encoding='utf-8') as output:
-                json.dump(result, output, ensure_ascii=False)
+            # 簡體轉繁體 & 正則化時間相關欄位
+            result = ch_simple2tradi.convert_text(result)
+            result = regularTime.modify_dates(result)
+
+            # json_path = f'./semantic_result/{folder_name}/{process}.json'
+            # with open(json_path, 'w', encoding='utf-8') as output:
+            #     json.dump(result, output, ensure_ascii=False)
 
             ct = response_.usage.completion_tokens
             pt = response_.usage.prompt_tokens

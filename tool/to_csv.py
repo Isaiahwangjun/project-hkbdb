@@ -11,13 +11,10 @@ sys.path.append("../temp")
 
 
 def to_csv():
-    with open(
-            r'C:\Users\wang\Desktop\daoyi\HongKong\api\semantic_result\杜漸\all_result.json',
-            'r',
-            encoding='utf-8') as f:
+    with open(r'modified_json_file.json', 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    with pd.ExcelWriter('杜漸.xlsx') as writer:
+    with pd.ExcelWriter('杜漸regular.xlsx') as writer:
         for key, values in data.items():
             df = pd.DataFrame(values)
 
