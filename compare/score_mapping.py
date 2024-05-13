@@ -4,7 +4,7 @@ sheet_score_mapping = {
     'Publication': 1 / 17,
     'Article': 1 / 10,
     'Pieces': 1 / 5,
-    'RelatedOrganization': 1 / 11,
+    'RelatedOrganizations': 1 / 11,
     'RelativeEvent': 1 / 7,
     'Honor': 1 / 5
 }

@@ -1,7 +1,7 @@
 def get_temp():
 
     Publication_labels = {
-        "書籍名稱": "rdfs:label",
+        "書籍名稱": "label_publication",
         "類型": "hasGenre",
         "欄目名稱": "column",
         "備註": "comment",

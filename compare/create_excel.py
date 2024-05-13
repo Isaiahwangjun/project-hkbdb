@@ -3,11 +3,10 @@
 import openpyxl
 
 
-def create(name):
+def create(name, root_path):
     file_list = [
-        "BasicInformation", "NameInformation", "Education", "Work",
-        "Publication", "Article", "RelativeEvent", "Honor",
-        "RelatedOrganizations", "Pieces", "Connections"
+        "BasicInformation", "Education", "Work", "Publication", "Article",
+        "RelativeEvent", "Honor", "RelatedOrganizations", "Connections"
     ]
 
     # 創建一個新的 Excel 工作簿
@@ -31,7 +30,7 @@ def create(name):
     workbook.remove(workbook['Sheet'])
 
     # 儲存 Excel 文件
-    workbook.save(f"./Dustin-calculateAccu/{name}/diff.xlsx")
+    workbook.save(f'{root_path}/{name}/diff.xlsx')
 
     workbook = openpyxl.Workbook()
 
@@ -50,15 +49,15 @@ def create(name):
     workbook.remove(workbook['Sheet'])
 
     # 儲存 Excel 文件
-    workbook.save(f"./Dustin-calculateAccu/{name}/GPThas.xlsx")
-    workbook.save(f"./Dustin-calculateAccu/{name}/HKBDBhas.xlsx")
+    workbook.save(f'{root_path}/{name}/GPThas.xlsx')
+    workbook.save(f'{root_path}/{name}//HKBDBhas.xlsx')
 
 
-def create_score():
+def create_score(name, root_path):
     file_list = [
-        "name", "BasicInformation", "NameInformation", "Education", "Work",
-        "Publication", "Article", "RelativeEvent", "Honor",
-        "RelatedOrganizations", "Pieces", "Connections"
+        "name", "BasicInformation", "Education", "Work", "Publication",
+        "Article", "RelativeEvent", "Honor", "RelatedOrganizations",
+        "Connections"
     ]
 
     # 創建一個新的 Excel 工作簿
@@ -77,4 +76,4 @@ def create_score():
     workbook.remove(workbook['Sheet'])
 
     # 儲存 Excel 文件
-    workbook.save(f"./Dustin-calculateAccu/score.xlsx")
+    workbook.save(f'{root_path}/{name}/score.xlsx')

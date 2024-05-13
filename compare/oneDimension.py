@@ -9,7 +9,7 @@ import DFappend
 from score_mapping import sheet_score_mapping
 
 
-def onlyhas(data, sheet, name, dcox):
+def onlyhas(data, sheet, name, dcox, root_path):
     df = pd.DataFrame(columns=['key', 'value'])
     score_cnt = 0
 
@@ -18,32 +18,38 @@ def onlyhas(data, sheet, name, dcox):
         for column in data.columns:
             if column in package.match_conditions:
                 x = row[column]  # 从 data 中获取列的值
-                df = DFappend.onlyGPTorHKBDBhasDF(df, column, x)
-                score_cnt += 1
+                if pd.notnull(x):
+                    df = DFappend.onlyGPTorHKBDBhasDF(df, column, x)
+                    score_cnt += 1
 
-    mergeExcel(name, sheet, dcox, df)
+    mergeExcel(name, sheet, dcox, df, root_path)
     if dcox == 'HKBDBhas':
-        writeInScoreExcel('onlyHKBDB', name, sheet, score_cnt)
+        writeInScoreExcel('onlyHKBDB', name, sheet, score_cnt, root_path)
     else:
-        writeInScoreExcel('onlyGPT', name, sheet, score_cnt)
+        writeInScoreExcel('onlyGPT', name, sheet, score_cnt, root_path)
 
 
-def onlyhas_two(data, sheet, name, dcox):
+def onlyhas_two(data, sheet, name, dcox, root_path):
     df = pd.DataFrame(columns=['key', 'value', 'source'])
     sheet_columns = sheet_column_mapping.get(sheet, None)
+    score_cnt = 0
+
     for _, row in data.iterrows():
         package = dynamic_import(sheet)
         for column in data.columns:
             if column in package.match_conditions:
                 x = row[column]  # 从 data 中获取列的值
-                df = DFappend.onlyGPTorHKBDBhasDF(df, column, x,
-                                                  row[sheet_columns])
-    mergeExcel(name, sheet, dcox, df)
-    score_cnt = len(data)
+                value = row.get(sheet_columns)
+                if value is None:
+                    value = 'None'
+                if pd.notnull(x):
+                    score_cnt += 1
+                    df = DFappend.onlyGPTorHKBDBhasDF(df, column, x, value)
+    mergeExcel(name, sheet, dcox, df, root_path)
     if dcox == 'HKBDBhas':
-        writeInScoreExcel('onlyHKBDB', name, sheet, score_cnt)
+        writeInScoreExcel('onlyHKBDB', name, sheet, score_cnt, root_path)
     else:
-        writeInScoreExcel('onlyGPT', name, sheet, score_cnt)
+        writeInScoreExcel('onlyGPT', name, sheet, score_cnt, root_path)
 
 
 def dynamic_import(package_name):
@@ -63,20 +69,24 @@ def generate_diff(old_text, new_text):
     return diff_html
 
 
-def mergeExcel(name, sheet, dcox, df):
-    workbook = openpyxl.load_workbook(
-        f"./Dustin-calculateAccu/{name}/{dcox}.xlsx")
+def mergeExcel(name, sheet, dcox, df, root_path):
+    workbook = openpyxl.load_workbook(f'{root_path}/{name}/{dcox}.xlsx')
     worksheet = workbook[sheet]
 
     for row in dataframe_to_rows(df, index=False, header=False):
         worksheet.append(row)
     worksheet.append([' ', ' '])
-    workbook.save(f"./Dustin-calculateAccu/{name}/{dcox}.xlsx")
+    workbook.save(f'{root_path}/{name}/{dcox}.xlsx')
 
 
-def writeInScoreExcel(type, name, sheet, score):
-    workbook = openpyxl.load_workbook(f"./Dustin-calculateAccu/score.xlsx")
+def writeInScoreExcel(type, name, sheet, score, root_path, full=None):
+    workbook = openpyxl.load_workbook(f'{root_path}/{name}/score.xlsx')
     worksheet = workbook[type]
+
+    if full is not None:
+        name_write = f'{name}-Full'
+    else:
+        name_write = name
 
     specific_column_index = None
     for i, cell in enumerate(worksheet[1]):  # 第一行是标题行
@@ -84,23 +94,23 @@ def writeInScoreExcel(type, name, sheet, score):
             specific_column_index = i + 1
 
     for row in worksheet.iter_rows(min_row=2, max_col=specific_column_index):
-        if row[0].value == name:
+        if row[0].value == name_write:
             worksheet.cell(row=row[0].row,
                            column=specific_column_index,
                            value=score)
-            workbook.save(f"./Dustin-calculateAccu/score.xlsx")
+            workbook.save(f'{root_path}/{name}/score.xlsx')
             return
 
     # 如果没有找到相同名称的行，则创建新行并添加分数
     max_row = worksheet.max_row
-    worksheet.cell(row=max_row + 1, column=1, value=name)
+    worksheet.cell(row=max_row + 1, column=1, value=name_write)
     worksheet.cell(row=max_row + 1, column=specific_column_index, value=score)
 
     # 保存 Excel 文件
-    workbook.save(f"./Dustin-calculateAccu/score.xlsx")
+    workbook.save(f'{root_path}/{name}/score.xlsx')
 
 
-def diffWith2File_one(data, ans, sheet, name):
+def diffWith2File_one(data, ans, sheet, name, root_path):
 
     match_total_cnt = 0  # 計算兩者都有的總欄位數
     match_gpt_score = 0  # 計算兩者的相似度 or 準確率
@@ -108,14 +118,10 @@ def diffWith2File_one(data, ans, sheet, name):
     GPTless = 0
     hkbdbCnt = len(ans)
 
-    with open(f"./Dustin-calculateAccu/{name}/diff.html",
-              "a",
-              encoding='utf-8') as f:
+    with open(f'{root_path}/{name}/diff.html', "a", encoding='utf-8') as f:
         f.write(f"<h3>{sheet}</h3>")
 
-    with open(f"./Dustin-calculateAccu/{name}/same.html",
-              "a",
-              encoding='utf-8') as f:
+    with open(f'{root_path}/{name}/same.html', "a", encoding='utf-8') as f:
         f.write(f"<h3>{sheet}</h3>")
 
     diff_df = pd.DataFrame(columns=['key', 'GPT', 'HKBDB', 'score', 'source'])
@@ -146,7 +152,7 @@ def diffWith2File_one(data, ans, sheet, name):
                 if match_result != 100:
                     diff_html = generate_diff(str(x), str(y))
                     diff_html_with_info = f"{condition_key}: {diff_html} ({match_result})<br>"
-                    with open(f"./Dustin-calculateAccu/{name}/diff.html",
+                    with open(f'{root_path}/{name}/diff.html',
                               "a",
                               encoding='utf-8') as f:
                         f.write(diff_html_with_info)
@@ -156,7 +162,7 @@ def diffWith2File_one(data, ans, sheet, name):
                                               match_result)
                 else:  #如果相似度 = 100, 網頁呈現
                     html_info = f"{condition_key} <span style='background-color: rgba(255, 0, 0, 0.3);'>{x} </span> <span style='background-color: rgba(0, 255, 0, 0.3);'>{y}</span><br>"
-                    with open(f"./Dustin-calculateAccu/{name}/same.html",
+                    with open(f'{root_path}/{name}/same.html',
                               "a",
                               encoding='utf-8') as f:
                         f.write(html_info)
@@ -175,35 +181,36 @@ def diffWith2File_one(data, ans, sheet, name):
                     HKBDBhas_df = DFappend.onlyGPTorHKBDBhasDF(
                         HKBDBhas_df, condition_key, y)
                     GPTless += 1
+    if match_total_cnt != 0:
+        writeInScoreExcel('accuracy', name, sheet,
+                          (match_gpt_score / match_total_cnt), root_path)
+    else:
+        print("one")
+    writeInScoreExcel('onlyGPT', name, sheet, (GPTmore / hkbdbCnt), root_path)
+    writeInScoreExcel('onlyHKBDB', name, sheet, (GPTless / hkbdbCnt),
+                      root_path)
 
-    writeInScoreExcel('accuracy', name, sheet,
-                      (match_gpt_score / match_total_cnt))
-    writeInScoreExcel('onlyGPT', name, sheet, (GPTmore / hkbdbCnt))
-    writeInScoreExcel('onlyHKBDB', name, sheet, (GPTless / hkbdbCnt))
-
-    mergeExcel(name, sheet, 'diff', diff_df)
-    mergeExcel(name, sheet, 'GPThas', GPThas_df)
-    mergeExcel(name, sheet, 'HKBDBhas', HKBDBhas_df)
+    mergeExcel(name, sheet, 'diff', diff_df, root_path)
+    mergeExcel(name, sheet, 'GPThas', GPThas_df, root_path)
+    mergeExcel(name, sheet, 'HKBDBhas', HKBDBhas_df, root_path)
 
     # match_accuracy = match_gpt_score / match_total_cnt
     # print(match_accuracy)
 
 
-def diffWith2File_two(data, ans, sheet, name):
+def diffWith2File_two(data, ans, sheet, name, root_path):
 
     match_total_cnt = 0  # 計算兩者都有的總欄位數
     match_gpt_score = 0  # 計算兩者的相似度 or 準確率
     GPTmore = 0
     GPTless = 0
+    GPTmoreFull = 0
+    GPTlessFull = 0
 
-    with open(f"./Dustin-calculateAccu/{name}/diff.html",
-              "a",
-              encoding='utf-8') as f:
+    with open(f"{root_path}/{name}/diff.html", "a", encoding='utf-8') as f:
         f.write(f"<h3>{sheet}</h3>")
 
-    with open(f"./Dustin-calculateAccu/{name}/same.html",
-              "a",
-              encoding='utf-8') as f:
+    with open(f"{root_path}/{name}/same.html", "a", encoding='utf-8') as f:
         f.write(f"<h3>{sheet}</h3>")
 
     diff_df = pd.DataFrame(columns=['key', 'GPT', 'HKBDB', 'score', 'source'])
@@ -218,13 +225,13 @@ def diffWith2File_two(data, ans, sheet, name):
 
     hkbdbCnt = len(unmatched_ans)  # 計算 (gpt有hkbdb沒有 or hkbdb有gpt沒有) 的分母
 
-    # 根据某一列的字符串长度对 DataFrame 进行排序
-    data = data.sort_values(by=data.columns[0],
-                            key=lambda x: x.str.len(),
-                            ascending=False)
-    ans = ans.sort_values(by=ans.columns[0],
-                          key=lambda x: x.str.len(),
-                          ascending=False)
+    # # 根据某一列的字符串长度对 DataFrame 进行排序
+    # data = data.sort_values(by=data.columns[0],
+    #                         key=lambda x: x.str.len(),
+    #                         ascending=False)
+    # ans = ans.sort_values(by=ans.columns[0],
+    #                       key=lambda x: x.str.len(),
+    #                       ascending=False)
 
     for _, row_data in data.iterrows():
         best_match_ratio = -1  # 最佳匹配相似度
@@ -233,14 +240,17 @@ def diffWith2File_two(data, ans, sheet, name):
         # 遍历 ans 的每一行
         for _, row_ans in unmatched_ans.iterrows():
             # 计算当前行与 data 行的相似度
-            similarity_ratio = fuzz.ratio(str(row_data[sheet_columns]),
-                                          str(row_ans[sheet_columns]))
+            if sheet_columns in row_data and sheet_columns in row_ans:
+                if row_data[sheet_columns] is not None and row_ans[
+                        sheet_columns] is not None:
+                    similarity_ratio = fuzz.ratio(str(row_data[sheet_columns]),
+                                                  str(row_ans[sheet_columns]))
 
-            # 更新最佳匹配
-            if similarity_ratio > 50:
-                if similarity_ratio > best_match_ratio:
-                    best_match_ratio = similarity_ratio
-                    best_match_row_ans = row_ans
+                    # 更新最佳匹配
+                    if similarity_ratio > 50:
+                        if similarity_ratio > best_match_ratio:
+                            best_match_ratio = similarity_ratio
+                            best_match_row_ans = row_ans
         # print(row_data[0], best_match_row_ans[0])
         # 如果找到了最佳匹配行，從未匹配的 ans 列表中刪除該行
         if best_match_row_ans is not None:
@@ -269,7 +279,7 @@ def diffWith2File_two(data, ans, sheet, name):
                 if match_result != 100:
                     diff_html = generate_diff(str(x), str(y))
                     diff_html_with_info = f"{condition_key}: {diff_html} ({match_result})<br>"
-                    with open(f"./Dustin-calculateAccu/{name}/diff.html",
+                    with open(f"{root_path}/{name}/diff.html",
                               "a",
                               encoding='utf-8') as f:
                         f.write(diff_html_with_info)
@@ -280,7 +290,7 @@ def diffWith2File_two(data, ans, sheet, name):
 
                 else:  #如果相似度 = 100, 網頁呈現
                     html_info = f"{condition_key} <span style='background-color: rgba(255, 0, 0, 0.3);'>{x} </span> <span style='background-color: rgba(0, 255, 0, 0.3);'>{y}</span><br>"
-                    with open(f"./Dustin-calculateAccu/{name}/same.html",
+                    with open(f"{root_path}/{name}/same.html",
                               "a",
                               encoding='utf-8') as f:
                         f.write(html_info)
@@ -288,47 +298,70 @@ def diffWith2File_two(data, ans, sheet, name):
 
             #4/29 接著做 data 有而 ans 沒有、ans 有而 data 沒有
             elif pd.notnull(x):
-                GPTmore += EachCellScore
+                # GPTmore += EachCellScore
+                GPTmore += 1
                 # print(
                 #     f"{best_match_row_ans[sheet_columns]} {condition_key} GPT有， HKDBD沒有"
                 # )
+                value = best_match_row_ans.get(sheet_columns)
+                if value is None:
+                    value = 'None'
                 GPThas_df = DFappend.onlyGPTorHKBDBhasDF(
-                    GPThas_df, condition_key, x,
-                    str(best_match_row_ans[sheet_columns]))
+                    GPThas_df, condition_key, x, value)
 
             elif pd.notnull(y):
-                GPTless += EachCellScore
+                # GPTless += EachCellScore
+                GPTless += 1
                 # print(
                 #     f"{best_match_row_ans[sheet_columns]} {condition_key} HKBDB有， GPT沒有"
                 # )
+                value = best_match_row_ans.get(sheet_columns)
+                if value is None:
+                    value = 'None'
                 HKBDBhas_df = DFappend.onlyGPTorHKBDBhasDF(
-                    HKBDBhas_df, condition_key, y,
-                    str(best_match_row_ans[sheet_columns]))
+                    HKBDBhas_df, condition_key, y, value)
 
     for _, row_data in unmatched_data.iterrows():
-        GPTmore += 1
+        # GPTmore += 1
+        GPTmoreFull += 1
         package = dynamic_import(sheet)
         for condition_key, match_function in package.match_conditions.items():
             x = row_data.get(condition_key)
             if pd.notnull(x):
+                value = row_data.get(sheet_columns)
+                if value is None:
+                    value = 'None'
                 GPThas_df = DFappend.onlyGPTorHKBDBhasDF(
-                    GPThas_df, condition_key, x, str(row_data[sheet_columns]))
+                    GPThas_df, condition_key, x, value)
 
     for _, row_data in unmatched_ans.iterrows():
-        GPTless += 1
+        # GPTless += 1
+        GPTlessFull += 1
         package = dynamic_import(sheet)
         for condition_key, match_function in package.match_conditions.items():
             x = row_data.get(condition_key)
             if pd.notnull(x):
+                value = row_data.get(sheet_columns)
+                if value is None:
+                    value = 'None'
                 HKBDBhas_df = DFappend.onlyGPTorHKBDBhasDF(
-                    HKBDBhas_df, condition_key, x,
-                    str(row_data[sheet_columns]))
+                    HKBDBhas_df, condition_key, x, value)
 
-    writeInScoreExcel('accuracy', name, sheet,
-                      (match_gpt_score / match_total_cnt))
-    writeInScoreExcel('onlyGPT', name, sheet, (GPTmore / hkbdbCnt))
-    writeInScoreExcel('onlyHKBDB', name, sheet, (GPTless / hkbdbCnt))
+    if match_total_cnt != 0:
+        writeInScoreExcel('accuracy', name, sheet,
+                          (match_gpt_score / match_total_cnt), root_path)
+    else:
+        print("two")
+    # writeInScoreExcel('onlyGPT', name, sheet, (GPTmore / hkbdbCnt), root_path)
+    # writeInScoreExcel('onlyHKBDB', name, sheet, (GPTless / hkbdbCnt),
+    #                   root_path)
 
-    mergeExcel(name, sheet, 'diff', diff_df)
-    mergeExcel(name, sheet, 'GPThas', GPThas_df)
-    mergeExcel(name, sheet, 'HKBDBhas', HKBDBhas_df)
+    writeInScoreExcel('onlyGPT', name, sheet, GPTmore, root_path)
+    writeInScoreExcel('onlyHKBDB', name, sheet, GPTless, root_path)
+
+    writeInScoreExcel('onlyGPT', name, sheet, GPTmoreFull, root_path, full=1)
+    writeInScoreExcel('onlyHKBDB', name, sheet, GPTlessFull, root_path, full=1)
+
+    mergeExcel(name, sheet, 'diff', diff_df, root_path)
+    mergeExcel(name, sheet, 'GPThas', GPThas_df, root_path)
+    mergeExcel(name, sheet, 'HKBDBhas', HKBDBhas_df, root_path)

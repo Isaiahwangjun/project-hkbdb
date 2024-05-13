@@ -1,9 +1,10 @@
 def get_temp():
 
     Work_labels = {
-        "工作名稱": "rdfs:label",
+        # "工作名稱": "rdfs:label",
         "工作類型": "employmentType",
-        "職稱": "jobTitle",
+        "工作名稱": "jobTitle",
+        # "職稱": "jobTitle",
         "地點": "hasPlace",
         "工作地點": "hasPlace",
         "工作於": "hasEmployedAt",

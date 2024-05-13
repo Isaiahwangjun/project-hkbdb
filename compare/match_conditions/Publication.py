@@ -1,7 +1,7 @@
 from match_conditions.fuzzf import completely, partial_ratio, token_sort_ratio
 
 match_conditions = {
-    "rdfs:label": partial_ratio,
+    "label_publication": partial_ratio,
     "hasGenre": partial_ratio,
     "column": partial_ratio,
     "hasAuthor": completely,

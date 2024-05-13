@@ -8,7 +8,8 @@ def get_temp():
         "開始時間": "hasStartDate",
         "結束時間": "hasEndDate",
         "地點": "hasPlace",
-        "原始資料": "source"
+        "原始資料": "source",
+        "學校名稱": "hasEducatedAt"
     }
 
     return Educate_labels

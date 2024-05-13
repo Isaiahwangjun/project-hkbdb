@@ -10,6 +10,7 @@ from datetime import datetime
 from flask_cors import CORS
 import threading
 from tool import ch_simple2tradi, regularTime
+import csv
 
 app = Flask(__name__)
 app.debug = True
@@ -20,10 +21,23 @@ all_processes = [
     "baseinfo", "nameinfo", "educate", "work", "publication", "article",
     "event", "honor", "organize", "piece", "relation"
 ]
-# all_processes = [
-#     "baseinfo", "nameinfo"]
+
 name_value = 0
 folder_name = 0
+
+file_locks = {}
+
+def write_to_csv(file_name, folder_name, ct, pt):
+    # 取得文件鎖
+    file_locks[file_name].acquire()
+    try:
+        li = [folder_name, ct, ct * 0.03 / 1000, pt, pt * 0.01 / 1000]
+        with open(file_name, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(li)
+    finally:
+        # 釋放文件鎖
+        file_locks[file_name].release()
 
 
 def try_parse_json(info):
@@ -68,7 +82,7 @@ def process_data_info():
         # 簡體轉繁體 & 正則化時間相關欄位
         result = ch_simple2tradi.convert_text(result)
         result = regularTime.modify_dates(result)
-
+        
         basic_info = result.get('BasicInformation', [{}])[0]
         name_value = basic_info.get('常見名稱', basic_info.get('本名'))
 
@@ -86,19 +100,16 @@ def process_data_info():
 
         ct = response_.usage.completion_tokens
         pt = response_.usage.prompt_tokens
+        
+        file_name = 'token/baseinfo.csv'
+        # 檢查文件名是否已經在字典中
+        if file_name not in file_locks:
+            # 如果沒有，則創建一個新的鎖
+            file_locks[file_name] = threading.Lock()
 
-        lock = threading.Lock()
-        lock.acquire()
-        try:
-            wb = openpyxl.load_workbook('token.xlsx', data_only=True)
-
-            sheet = wb['baseinfo']
-            li = [folder_name, ct, ct * 0.03 / 1000, pt, pt * 0.01 / 1000]
-            sheet.append(li)
-            wb.save('token.xlsx')
-            wb.close()
-        finally:
-            lock.release()
+        # 創建一個線程來寫入文件
+        thread = threading.Thread(target=write_to_csv, args=(file_name, folder_name, ct, pt))
+        thread.start()
 
         return jsonify(result=result, folder_name=folder_name)
 
@@ -122,6 +133,7 @@ for process in all_processes:
         else:
             data = reciveData.get("data")
             folder_name = reciveData.get("folder_name")
+           
             load_dotenv()
             api_key = os.environ.get('OPENAI_API_KEY')
             client = OpenAI(api_key=api_key)
@@ -134,35 +146,31 @@ for process in all_processes:
 
             response_ = response.create_completion(client, system_message,
                                                    user_message, rule, process)
-
+            print(response_.choices[0].message.content)
             # result = json.loads(response_.choices[0].message.content)
             result = try_parse_json(response_.choices[0].message.content)
-
+           
             # 簡體轉繁體 & 正則化時間相關欄位
             result = ch_simple2tradi.convert_text(result)
             result = regularTime.modify_dates(result)
 
-            # json_path = f'./semantic_result/{folder_name}/{process}.json'
-            # with open(json_path, 'w', encoding='utf-8') as output:
-            #     json.dump(result, output, ensure_ascii=False)
+            json_path = f'./semantic_result/{folder_name}/{process}.json'
+            with open(json_path, 'w', encoding='utf-8') as output:
+                json.dump(result, output, ensure_ascii=False)
 
             ct = response_.usage.completion_tokens
             pt = response_.usage.prompt_tokens
-
-            lock = threading.Lock()
-            lock.acquire()
-            try:
-                wb = openpyxl.load_workbook('token.xlsx', data_only=True)
-
-                sheet = wb[process]
-                li = [folder_name, ct, ct * 0.03 / 1000, pt, pt * 0.01 / 1000]
-                sheet.append(li)
-                wb.save('token.xlsx')
-                wb.close()
-            finally:
-                lock.release()
-
             # all_result = jsonCombine.combine(folder_name)
+            
+            file_name = f"token/{process}.csv"
+            # 檢查文件名是否已經在字典中
+            if file_name not in file_locks:
+                # 如果沒有，則創建一個新的鎖
+                file_locks[file_name] = threading.Lock()
+
+            # 創建一個線程來寫入文件
+            thread = threading.Thread(target=write_to_csv, args=(file_name, folder_name, ct, pt))
+            thread.start()
 
             return jsonify(result)
 

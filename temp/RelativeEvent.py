@@ -1,7 +1,7 @@
 def get_temp():
 
     RelativeEvent_labels = {
-        "事件名稱": "rdfs:label",
+        "事件名稱": "label_event",
         "地點": "hasEventPlace",
         "相關人物": "hasRelatedPerson",
         "相關組織": "hasRelatedOrganization",

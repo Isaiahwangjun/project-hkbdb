@@ -10,11 +10,16 @@ import sys
 sys.path.append("../temp")
 
 
-def to_csv():
-    with open(r'modified_json_file.json', 'r', encoding='utf-8') as f:
+def to_csv(name):
+    with open(
+            f'C:/Users/wang/Desktop/daoyi/HongKong/capture100/{name}/all_result.json',
+            'r',
+            encoding='utf-8') as f:
         data = json.load(f)
 
-    with pd.ExcelWriter('杜漸regular.xlsx') as writer:
+    with pd.ExcelWriter(
+            f'C:/Users/wang/Desktop/daoyi/HongKong/capture100/{name}/gpt.xlsx'
+    ) as writer:
         for key, values in data.items():
             df = pd.DataFrame(values)
 
@@ -32,6 +37,3 @@ def to_csv():
             except ModuleNotFoundError as e:
                 df.to_excel(writer, sheet_name=key, index=False)
                 print(e)
-
-
-to_csv()

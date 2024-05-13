@@ -1,7 +1,7 @@
 def get_temp():
 
     Article_labels = {
-        "文章名稱": "rdfs:label",
+        "文章名稱": "label_article",
         "作者": "hasAuthor",
         "作家": "hasAuthor",
         "作品描述之對象": "hasDescribedTarget",
