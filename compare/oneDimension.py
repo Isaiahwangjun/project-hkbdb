@@ -47,9 +47,14 @@ def onlyhas_two(data, sheet, name, dcox, root_path):
                     df = DFappend.onlyGPTorHKBDBhasDF(df, column, x, value)
     mergeExcel(name, sheet, dcox, df, root_path)
     if dcox == 'HKBDBhas':
-        writeInScoreExcel('onlyHKBDB', name, sheet, score_cnt, root_path)
+        writeInScoreExcel('onlyHKBDB',
+                          name,
+                          sheet,
+                          score_cnt,
+                          root_path,
+                          full=1)
     else:
-        writeInScoreExcel('onlyGPT', name, sheet, score_cnt, root_path)
+        writeInScoreExcel('onlyGPT', name, sheet, score_cnt, root_path, full=1)
 
 
 def dynamic_import(package_name):
