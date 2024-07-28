@@ -1,4 +1,4 @@
-# jsonCombine --> ch_simple2tradi --> regularTime --> regularTime
+#  --> ch_simple2tradi --> regularTime --> to csv
 
 from jsonCombine import combine
 from ch_simple2tradi import convert_text
@@ -10,7 +10,6 @@ import sys
 def main(name):
 
     try:
-        # combine(name)
         convert_text(name)
         modify_dates(name)
         to_csv(name)

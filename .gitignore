@@ -6,3 +6,5 @@ env/
 nohup.out
 token.xlsx
 compare/Dustin-calculateAccu/
+report
+*.zip

@@ -36,14 +36,18 @@ def onlyhas_two(data, sheet, name, dcox, root_path):
 
     for _, row in data.iterrows():
         package = dynamic_import(sheet)
+        if isinstance(sheet_columns, list):
+            value = row.get(sheet_columns[0])
+        else:
+            value = row.get(sheet_columns)
+        if value is None:
+            value = 'None'
+        else:
+            score_cnt += 1
         for column in data.columns:
             if column in package.match_conditions:
                 x = row[column]  # 从 data 中获取列的值
-                value = row.get(sheet_columns)
-                if value is None:
-                    value = 'None'
                 if pd.notnull(x):
-                    score_cnt += 1
                     df = DFappend.onlyGPTorHKBDBhasDF(df, column, x, value)
     mergeExcel(name, sheet, dcox, df, root_path)
     if dcox == 'HKBDBhas':
@@ -77,7 +81,6 @@ def generate_diff(old_text, new_text):
 def mergeExcel(name, sheet, dcox, df, root_path):
     workbook = openpyxl.load_workbook(f'{root_path}/{name}/{dcox}.xlsx')
     worksheet = workbook[sheet]
-
     for row in dataframe_to_rows(df, index=False, header=False):
         worksheet.append(row)
     worksheet.append([' ', ' '])
@@ -139,8 +142,17 @@ def diffWith2File_one(data, ans, sheet, name, root_path):
         package = dynamic_import(sheet)
         # 對於每個匹配條件，根據其鍵選取相應的匹配函數
         for condition_key, match_function in package.match_conditions.items():
+
             x = row.get(condition_key)  # 從 data 中取得 x 的值
             y = y_row.get(condition_key)  # 從 ans 中取得 y 的值
+
+            if (condition_key == 'hasPlaceOfBirth'
+                    or 'hasNativePlace') and y is not None and pd.notnull(y):
+                y = str(y).split('_')[0]
+
+            if (condition_key == 'hasBirthDate'
+                    or 'hasDeathDate') and y is not None and pd.notnull(y):
+                y = str(y).replace('-', '')
 
             # 處理三種情況：data 有而 ans 沒有、ans 有而 data 沒有、兩者都有
             if x is not None and y is not None:
@@ -228,35 +240,53 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
     unmatched_data = pd.DataFrame()  # 存储未匹配到的 data 行
     unmatched_ans = ans.copy()  # 創建 ans 的副本用於追蹤未匹配的行
 
-    hkbdbCnt = len(unmatched_ans)  # 計算 (gpt有hkbdb沒有 or hkbdb有gpt沒有) 的分母
-
-    # # 根据某一列的字符串长度对 DataFrame 进行排序
-    # data = data.sort_values(by=data.columns[0],
-    #                         key=lambda x: x.str.len(),
-    #                         ascending=False)
-    # ans = ans.sort_values(by=ans.columns[0],
-    #                       key=lambda x: x.str.len(),
-    #                       ascending=False)
-
+    # 如果拿到的是 list，代表要比較多個關鍵欄位
     for _, row_data in data.iterrows():
         best_match_ratio = -1  # 最佳匹配相似度
         best_match_row_ans = None  # 最佳匹配的 ans 行
 
         # 遍历 ans 的每一行
         for _, row_ans in unmatched_ans.iterrows():
-            # 计算当前行与 data 行的相似度
-            if sheet_columns in row_data and sheet_columns in row_ans:
-                if row_data[sheet_columns] is not None and row_ans[
-                        sheet_columns] is not None:
-                    similarity_ratio = fuzz.ratio(str(row_data[sheet_columns]),
-                                                  str(row_ans[sheet_columns]))
 
-                    # 更新最佳匹配
-                    if similarity_ratio > 50:
-                        if similarity_ratio > best_match_ratio:
-                            best_match_ratio = similarity_ratio
-                            best_match_row_ans = row_ans
-        # print(row_data[0], best_match_row_ans[0])
+            if isinstance(sheet_columns, list):
+                # 计算当前行与 data 行的相似度
+                if sheet_columns[0] in row_data and sheet_columns[0] in row_ans:
+                    if row_data[sheet_columns[0]] is not None and row_ans[
+                            sheet_columns[0]] is not None:
+                        similarity_ratio = fuzz.ratio(
+                            str(row_data[sheet_columns[0]]),
+                            str(row_ans[sheet_columns[0]]))
+
+                if sheet_columns[1] in row_data and sheet_columns[1] in row_ans:
+                    if row_data[sheet_columns[1]] is not None and row_ans[
+                            sheet_columns[1]] is not None:
+                        similarity_ratio += fuzz.ratio(
+                            str(row_data[sheet_columns[1]]),
+                            str(row_ans[sheet_columns[1]]))
+                # 更新最佳匹配
+                if similarity_ratio > 100:
+                    if similarity_ratio > best_match_ratio:
+                        best_match_ratio = similarity_ratio
+                        best_match_row_ans = row_ans
+                        print(f"similarity_ratio:{similarity_ratio}")
+                if unmatched_ans is not None:
+                    continue
+            else:
+                for _, row_ans in unmatched_ans.iterrows():
+                    # 计算当前行与 data 行的相似度
+                    if sheet_columns in row_data and sheet_columns in row_ans:
+                        if row_data[sheet_columns] is not None and row_ans[
+                                sheet_columns] is not None:
+                            similarity_ratio = fuzz.ratio(
+                                str(row_data[sheet_columns]),
+                                str(row_ans[sheet_columns]))
+
+                            # 更新最佳匹配
+                            if similarity_ratio > 50:
+                                if similarity_ratio > best_match_ratio:
+                                    best_match_ratio = similarity_ratio
+                                    best_match_row_ans = row_ans
+
         # 如果找到了最佳匹配行，從未匹配的 ans 列表中刪除該行
         if best_match_row_ans is not None:
             unmatched_ans = unmatched_ans.drop(best_match_row_ans.name)
@@ -270,6 +300,9 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
             x = row_data.get(condition_key)
             y = best_match_row_ans.get(condition_key)
 
+            if ('Date' in condition_key) and y is not None and pd.notnull(y):
+                y = str(y).replace('-', '')
+
             # 處理三種情況：data 有而 ans 沒有、ans 有而 data 沒有、兩者都有
             if pd.notnull(x) and pd.notnull(y):
                 # 都有的话，计算准确率
@@ -279,6 +312,8 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
                 # total accuracy
                 match_total_cnt += 1
                 match_gpt_score += match_result / 100
+                if sheet == 'RelativeEvent':
+                    print(x, y, match_result)
 
                 # 如果有差異，將差異的部分存入 diff_df
                 if match_result != 100:
@@ -289,9 +324,13 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
                               encoding='utf-8') as f:
                         f.write(diff_html_with_info)
                         f.write('\n')
-                    diff_df = DFappend.diffDF(
-                        diff_df, condition_key, x, y, match_result,
-                        str(best_match_row_ans[sheet_columns]))
+                    if isinstance(sheet_columns, list):
+                        value = best_match_row_ans.get(sheet_columns[0] +
+                                                       sheet_columns[1])
+                    else:
+                        value = best_match_row_ans.get(sheet_columns)
+                    diff_df = DFappend.diffDF(diff_df, condition_key, x, y,
+                                              match_result, value)
 
                 else:  #如果相似度 = 100, 網頁呈現
                     html_info = f"{condition_key} <span style='background-color: rgba(255, 0, 0, 0.3);'>{x} </span> <span style='background-color: rgba(0, 255, 0, 0.3);'>{y}</span><br>"
@@ -305,10 +344,11 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
             elif pd.notnull(x):
                 # GPTmore += EachCellScore
                 GPTmore += 1
-                # print(
-                #     f"{best_match_row_ans[sheet_columns]} {condition_key} GPT有， HKDBD沒有"
-                # )
-                value = best_match_row_ans.get(sheet_columns)
+                if isinstance(sheet_columns, list):
+                    value = best_match_row_ans.get(sheet_columns[0] +
+                                                   sheet_columns[1])
+                else:
+                    value = best_match_row_ans.get(sheet_columns)
                 if value is None:
                     value = 'None'
                 GPThas_df = DFappend.onlyGPTorHKBDBhasDF(
@@ -317,10 +357,11 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
             elif pd.notnull(y):
                 # GPTless += EachCellScore
                 GPTless += 1
-                # print(
-                #     f"{best_match_row_ans[sheet_columns]} {condition_key} HKBDB有， GPT沒有"
-                # )
-                value = best_match_row_ans.get(sheet_columns)
+                if isinstance(sheet_columns, list):
+                    value = best_match_row_ans.get(sheet_columns[0] +
+                                                   sheet_columns[1])
+                else:
+                    value = best_match_row_ans.get(sheet_columns)
                 if value is None:
                     value = 'None'
                 HKBDBhas_df = DFappend.onlyGPTorHKBDBhasDF(
@@ -367,6 +408,6 @@ def diffWith2File_two(data, ans, sheet, name, root_path):
     writeInScoreExcel('onlyGPT', name, sheet, GPTmoreFull, root_path, full=1)
     writeInScoreExcel('onlyHKBDB', name, sheet, GPTlessFull, root_path, full=1)
 
-    mergeExcel(name, sheet, 'diff', diff_df, root_path)
-    mergeExcel(name, sheet, 'GPThas', GPThas_df, root_path)
-    mergeExcel(name, sheet, 'HKBDBhas', HKBDBhas_df, root_path)
+    # mergeExcel(name, sheet, 'diff', diff_df, root_path)
+    # mergeExcel(name, sheet, 'GPThas', GPThas_df, root_path)
+    # mergeExcel(name, sheet, 'HKBDBhas', HKBDBhas_df, root_path)

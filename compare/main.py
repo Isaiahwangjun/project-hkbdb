@@ -38,9 +38,13 @@ def clear_excel(name, file, root_path):
     xls = pd.ExcelFile(f'{root_path}/{name}/{file}.xlsx')
 
     file_path = f'{root_path}/{name}/{file}-mod.xlsx'
-    if not os.path.exists(file_path):
-        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-            pd.DataFrame().to_excel(writer, index=False, sheet_name='Sheet1')
+    # if not os.path.exists(file_path):
+    #     with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+    #         pd.DataFrame().to_excel(writer, index=False, sheet_name='Sheet1')
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+        pd.DataFrame().to_excel(writer, index=False, sheet_name='Sheet1')
 
     for sheet_name in xls.sheet_names:
 
@@ -49,11 +53,21 @@ def clear_excel(name, file, root_path):
             continue
 
         specific_column = sheet_column_mapping.get(sheet_name)
-        if specific_column is not None:
-            if specific_column in data.columns and len(data) > 0:
-                data.dropna(subset=[specific_column], inplace=True)
-            else:
-                data = pd.DataFrame()
+
+        if isinstance(specific_column, list):
+            if specific_column[0] is not None:
+                if specific_column[0] in data.columns and len(data) > 0:
+                    data.dropna(subset=[specific_column[0]], inplace=True)
+                else:
+                    data = pd.DataFrame()
+
+        else:
+            if specific_column is not None:
+                if specific_column in data.columns and len(data) > 0:
+                    data.dropna(subset=[specific_column], inplace=True)
+                else:
+                    data = pd.DataFrame()
+
         with pd.ExcelWriter(f'{root_path}/{name}/{file}-mod.xlsx',
                             mode='a',
                             engine='openpyxl',

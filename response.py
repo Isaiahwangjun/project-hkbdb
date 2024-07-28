@@ -20,8 +20,7 @@ def create_completion(client, system_message, user_message, rule,
 
     # 調用 OpenAI API
     response = client.chat.completions.create(
-        model="gpt-4-0125-preview",
-        model="gpt-4-turbo-2024-04-09",
+        model="gpt-4o",
         temperature=default_temperature,
         response_format={"type": "json_object"},
         messages=[{

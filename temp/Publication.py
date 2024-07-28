@@ -8,6 +8,7 @@ def get_temp():
         "作者": "hasAuthor",
         "作家": "hasAuthor",
         "作品描述之對象": "hasDescribedTarget",
+        "出版年": "hasInceptionDate",
         "出版日期": "hasInceptionDate",
         "出版": "hasPublisher",
         "典藏單位": "hasReserved",

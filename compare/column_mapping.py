@@ -5,6 +5,6 @@ sheet_column_mapping = {
     'Article': 'label_article',
     'Pieces': 'rdfs:label',
     'RelatedOrganizations': 'rdfs:label',
-    'RelativeEvent': 'label_event',
+    'RelativeEvent': ['label_event', 'hasEventPlace'],
     'Honor': 'awardTitle'
 }

@@ -186,7 +186,7 @@ def score_summary():
 
     root_directory = r'C:\Users\wang\Desktop\daoyi\HongKong\capture100'
 
-    all_wb = load_workbook('summary3.xlsx', read_only=False)
+    all_wb = load_workbook('summary4.xlsx', read_only=False)
     # 获取名为'accuracy'的工作表
 
     accuracy_ws = all_wb['accuracy']
@@ -259,12 +259,12 @@ def score_summary():
             for row in accuracy_data:
                 onlyHKBDBfull_ws.append(row)
 
-    all_wb.save('summary3.xlsx')
+    all_wb.save('summary4.xlsx')
     all_wb.close()
 
 
 # import sys
 
-# hkbdb_add_organ_rdfs(sys.argv[1])
-# print(sys.argv[1])
+# change2newKeyname(sys.argv[1])
+# # print(sys.argv[1])
 score_summary()
